@@ -5,10 +5,10 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Копируем файл зависимостей packages.txt
-COPY requirements.txt ./
+COPY packages.txt ./
 
 # Устанавливаем зависимости
-RUN pip install -r requirements.txt
+RUN pip install -r packages.txt
 
 # Копируем исходный код простого приложения в образ
 COPY app.py .
