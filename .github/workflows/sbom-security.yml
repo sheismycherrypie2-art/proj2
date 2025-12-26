@@ -71,9 +71,9 @@ jobs:
           retention-days: 7
 
       - name: Upload SBOM to Dependency-Track (optional)
-        if: ${{ secrets.DTRACK_URL != '' && secrets.DTRACK_API_KEY != '' && secrets.DTRACK_PROJECT_UUID != '' }}
+        if: ${{ secrets.DTRACK_URL != null && secrets.DTRACK_API_KEY != null && secrets.DTRACK_PROJECT_UUID != null }}
         run: |
           curl -X POST "${{ secrets.DTRACK_URL }}/api/v1/bom" \
             -H "X-Api-Key: ${{ secrets.DTRACK_API_KEY }}" \
             -F "project=${{ secrets.DTRACK_PROJECT_UUID }}" \
-            -F "bom=@sbom.project.json"
+            -F "bom=@sbom.cdx.json"
