@@ -1,4 +1,4 @@
-name: SBOM and Dependency (Track and Check) analysis
+name: SBOM and Dependency analysis
 
 on:
   pull_request:
@@ -9,7 +9,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -20,6 +21,7 @@ jobs:
         run: |
           python -m venv .venv
           . .venv/bin/activate
+          pip install -U pip
           pip install -r packages.txt
           pip install cyclonedx-bom
           pip freeze > requirements.txt
@@ -44,14 +46,16 @@ jobs:
     needs: build-sbom
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Download SBOM artifact
         uses: actions/download-artifact@v4
         with:
           name: sbom
+          path: .
 
-      - name: Run OWASP Dependency-Check (experimental pip analyzer)
+      - name: Dependency-Check
         run: |
           mkdir -p reports/dependency-check
           docker run --rm \
@@ -70,10 +74,19 @@ jobs:
           path: reports/dependency-check
           retention-days: 7
 
-      - name: Upload SBOM to Dependency-Track (optional)
-        if: ${{ secrets.DTRACK_URL != null && secrets.DTRACK_API_KEY != null && secrets.DTRACK_PROJECT_UUID != null }}
+      - name: Dependency-Track
+        env:
+          DTRACK_URL: ${{ secrets.DTRACK_URL }}
+          DTRACK_API_KEY: ${{ secrets.DTRACK_API_KEY }}
+          DTRACK_PROJECT_UUID: ${{ secrets.DTRACK_PROJECT_UUID }}
         run: |
-          curl -X POST "${{ secrets.DTRACK_URL }}/api/v1/bom" \
-            -H "X-Api-Key: ${{ secrets.DTRACK_API_KEY }}" \
-            -F "project=${{ secrets.DTRACK_PROJECT_UUID }}" \
-            -F "bom=@sbom.cdx.json"
+          if [ -z "$DTRACK_URL" ] || [ -z "$DTRACK_API_KEY" ] || [ -z "$DTRACK_PROJECT_UUID" ]; then
+            echo "Dependency-Track secrets are not set. Skipping upload."
+            exit 0
+          fi
+
+          echo "Uploading SBOM to Dependency-Track..."
+          curl -sS -X POST "$DTRACK_URL/api/v1/bom" \
+            -H "X-Api-Key: $DTRACK_API_KEY" \
+            -F "project=$DTRACK_PROJECT_UUID" \
+            -F "bom=@sbom.project.json"
