@@ -55,7 +55,9 @@ jobs:
           name: sbom
           path: .
 
+      # Попытка устранить 1 [WARN] Disabling OSS Index analyzer due to missing user/password credentials. Authentication is now required: https://ossindex.sonatype.org/doc/auth-required
       - name: Dependency-Check
+        continue-on-error: true
         run: |
           mkdir -p reports/dependency-check
           docker run --rm \
@@ -65,7 +67,10 @@ jobs:
             --scan /src \
             --out /report \
             --format "HTML" \
-            --enableExperimental
+            --format "JSON" \
+            --enableExperimental \
+            --disableAssembly
+          ls -lah reports/dependency-check || true
 
       - name: Upload Dependency-Check report artifact
         uses: actions/upload-artifact@v4
