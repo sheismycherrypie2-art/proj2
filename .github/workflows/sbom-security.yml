@@ -55,6 +55,12 @@ jobs:
           name: sbom
           path: .
 
+      - name: Cache Dependency-Check data
+        uses: actions/cache@v4
+        with:
+          path: odc-data
+          key: odc-data-${{ runner.os }}
+
       # Попытка устранить 2 [WARN] Disabling OSS Index analyzer due to missing user/password credentials. Authentication is now required: https://ossindex.sonatype.org/doc/auth-required
       - name: Dependency-Check
         continue-on-error: true
@@ -62,14 +68,21 @@ jobs:
           set -euxo pipefail
 
           mkdir -p reports/dependency-check
-          chmod -R a+rwx reports/dependency-check
+          mkdir -p odc-data
+
+          chmod -R a+rwx reports/dependency-check odc-data
 
           docker run --rm \
             --user "$(id -u):$(id -g)" \
             -v "${PWD}":/src \
             -v "${PWD}/reports/dependency-check":/report \
+            -v "${PWD}/odc-data":/usr/share/dependency-check/data \
             owasp/dependency-check:latest \
             --scan /src \
+            --exclude "/src/.git/**" \
+            --exclude "/src/reports/**" \
+            --exclude "/src/odc-data/**" \
+            --exclude "/src/.venv/**" \
             --out /report \
             --format "HTML" \
             --format "JSON" \
@@ -77,11 +90,8 @@ jobs:
             --disableAssembly \
             2>&1 | tee reports/dependency-check/dependency-check.log || true
 
-          echo "===== REPORT DIR ====="
+          echo "===== Report directory ====="
           ls -lah reports/dependency-check || true
-
-          echo "===== LAST 200 LOG LINES ====="
-          tail -n 200 reports/dependency-check/dependency-check.log || true
 
       - name: Upload Dependency-Check report artifact
         uses: actions/upload-artifact@v4
