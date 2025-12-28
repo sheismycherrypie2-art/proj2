@@ -59,19 +59,30 @@ jobs:
       - name: Dependency-Check
         continue-on-error: true
         run: |
+          set -euxo pipefail
+
           mkdir -p reports/dependency-check
+          chmod -R a+rwx reports/dependency-check
+
           docker run --rm \
-            --user "1000:1000" \
+            --user "$(id -u):$(id -g)" \
             -v "${PWD}":/src \
             -v "${PWD}/reports/dependency-check":/report \
             owasp/dependency-check:latest \
             --scan /src \
             --out /report \
             --format "HTML" \
+            --format "JSON" \
             --enableExperimental \
-            --disableAssembly
+            --disableAssembly \
+            2>&1 | tee reports/dependency-check/dependency-check.log || true
+
+          echo "===== REPORT DIR ====="
           ls -lah reports/dependency-check || true
 
+          echo "===== LAST 200 LOG LINES ====="
+          tail -n 200 reports/dependency-check/dependency-check.log || true
+          
       - name: Upload Dependency-Check report artifact
         uses: actions/upload-artifact@v4
         with:
