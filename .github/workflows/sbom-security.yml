@@ -55,13 +55,13 @@ jobs:
           name: sbom
           path: .
 
-      # Попытка устранить 2 [WARN] Disabling OSS Index analyzer due to missing user/password credentials. Authentication is now required: https://ossindex.sonatype.org/doc/auth-required
+      # Попытка устранить 3 [WARN] Disabling OSS Index analyzer due to missing user/password credentials. Authentication is now required: https://ossindex.sonatype.org/doc/auth-required
       - name: Dependency-Check
         continue-on-error: true
         run: |
           mkdir -p reports/dependency-check
           docker run --rm \
-            --user "$(id -u):$(id -g)" \
+            --user "1000:1000" \
             -v "${PWD}":/src \
             -v "${PWD}/reports/dependency-check":/report \
             owasp/dependency-check:latest \
