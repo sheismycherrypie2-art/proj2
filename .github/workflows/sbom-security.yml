@@ -65,8 +65,6 @@ jobs:
       - name: Dependency-Check
         continue-on-error: true
         run: |
-          set -euxo pipefail
-
           mkdir -p reports/dependency-check
           mkdir -p odc-data
 
@@ -88,10 +86,7 @@ jobs:
             --format "JSON" \
             --enableExperimental \
             --disableAssembly \
-            2>&1 | tee reports/dependency-check/dependency-check.log || true
-
-          echo "===== Report directory ====="
-          ls -lah reports/dependency-check || true
+          ls -lah reports/dependency-check || true 
 
       - name: Upload Dependency-Check report artifact
         uses: actions/upload-artifact@v4
