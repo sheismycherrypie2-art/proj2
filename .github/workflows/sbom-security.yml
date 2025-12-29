@@ -55,47 +55,38 @@ jobs:
           name: sbom
           path: .
 
-      - name: Cache Dependency-Check data
-        uses: actions/cache@v4
-        with:
-          path: odc-data
-          key: odc-data-${{ runner.os }}
-
-      # Попытка устранить 2 [WARN] Disabling OSS Index analyzer due to missing user/password credentials. Authentication is now required: https://ossindex.sonatype.org/doc/auth-required
       - name: Dependency-Check
         continue-on-error: true
         run: |
           mkdir -p reports/dependency-check
-          mkdir -p odc-data
-
-          chmod -R a+rwx reports/dependency-check odc-data
+          chmod -R a+rwx reports/dependency-check
 
           docker run --rm \
             --user "$(id -u):$(id -g)" \
             -v "${PWD}":/src \
             -v "${PWD}/reports/dependency-check":/report \
-            -v "${PWD}/odc-data":/usr/share/dependency-check/data \
             owasp/dependency-check:latest \
             --scan /src \
             --exclude "/src/.git/**" \
             --exclude "/src/reports/**" \
-            --exclude "/src/odc-data/**" \
             --exclude "/src/.venv/**" \
             --out /report \
             --format "HTML" \
             --format "JSON" \
             --enableExperimental \
-            --disableAssembly \
-          ls -lah reports/dependency-check || true 
+            --disableAssembly || true
+
+          ls -lah reports/dependency-check || true
 
       - name: Upload Dependency-Check report artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: dependency-check-report
           path: reports/dependency-check
           retention-days: 7
 
-      - name: Dependency-Track
+      - name: Dependency-Track (optional)
         env:
           DTRACK_URL: ${{ secrets.DTRACK_URL }}
           DTRACK_API_KEY: ${{ secrets.DTRACK_API_KEY }}
@@ -106,7 +97,6 @@ jobs:
             exit 0
           fi
 
-          echo "Uploading SBOM to Dependency-Track..."
           curl -sS -X POST "$DTRACK_URL/api/v1/bom" \
             -H "X-Api-Key: $DTRACK_API_KEY" \
             -F "project=$DTRACK_PROJECT_UUID" \
